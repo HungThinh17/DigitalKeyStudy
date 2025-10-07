@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "nfcservices.h": "c",
+        "ownerpairingtask.h": "c",
+        "stuffdummy.h": "c"
+    }
+}

@@ -1,0 +1,50 @@
+
+### 🔹 **APDU Command Catalog (CCC Digital Key v4.0.0)**
+
+| **Command**                     | **Input (Simplified)**       | **Target Output**            | **From Component**              | **To Component** | **SE Role**                                                    | **Description / Purpose**                                                                     |
+| ------------------------------- | ---------------------------- | ---------------------------- | ------------------------------- | ---------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **SELECT**                      | AID                          | Status (Applet selected)     | Host (Vehicle ECU or Device OS) | SE-V / SE-D      | Both                                                           | Selects the Digital Key applet instance for further operations. First command in any session. |
+| **SPAKE2+ REQUEST**             | Random, password verifier    | Ephemeral public key         | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Part of ECC mutual authentication. First step of SPAKE2+ exchange.                            |
+| **SPAKE2+ VERIFY**              | Peer’s evidence              | Verify OK + Session key seed | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Second SPAKE2+ step. Confirms shared secret and proves authenticity.                          |
+| **WRITE DATA**                  | TLV with pairing or key data | Status                       | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Writes key creation or configuration data (during pairing).                                   |
+| **GET DATA**                    | Tag or Object ID             | Data TLV                     | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Reads specific object (cert, mailbox, etc.).                                                  |
+| **GET RESPONSE**                | Continuation flag            | Response TLV                 | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Retrieves extended data when previous APDU exceeded Le.                                       |
+| **OP CONTROL FLOW**             | Flow control params          | Status                       | Vehicle / Device                | SE-V / SE-D      | Both                                                           | Controls APDU sequencing: continue, success, failure.                                         |
+| **CREATE ENDPOINT**             | Endpoint config TLV          | Endpoint ID                  | Host app (Key Manager)          | SE-D             | Device                                                         | Create a new Digital Key endpoint inside the device’s SE.                                     |
+| **AUTHORIZE ENDPOINT**          | Authorization req TLV        | Auth attestation             | Host app                        | SE-D             | Device                                                         | Authorize endpoint or verify sender rights for key creation/sharing.                          |
+| **SETUP ENDPOINT**              | Endpoint parameters          | OK                           | Host app                        | SE-D             | Device                                                         | Initialize endpoint after creation (add certificates, policy, etc.).                          |
+| **SETUP INSTANCE**              | Instance parameters          | OK                           | Host app                        | SE-V / SE-D      | Both                                                           | Configure Digital Key applet instance; define allowed command set.                            |
+| **CREATE ENCRYPTION KEY**       | Key params TLV               | Attestation                  | Host app                        | SE-D             | Device                                                         | Generate symmetric key for secure data exchange or BLE/UWB.                                   |
+| **SIGN**                        | Data hash                    | ECDSA signature              | Host app / Vehicle ECU          | SE-V / SE-D      | Both                                                           | Generate digital signature (authentication, attestation).                                     |
+| **GET PRIVATE DATA**            | Tag list                     | Private data TLV             | Host app                        | SE-D             | Device                                                         | Retrieve private mailbox entries or owner certs.                                              |
+| **SET PRIVATE DATA**            | Data TLV                     | OK                           | Host app                        | SE-D             | Device                                                         | Store private data into mailbox.                                                              |
+| **SET CONFIDENTIAL DATA**       | Data TLV                     | OK                           | Host app                        | SE-D             | Device                                                         | Store confidential mailbox data.                                                              |
+| **READ BUFFER / WRITE BUFFER**  | Offset + data                | Data / OK                    | Host app                        | SE-D             | Device                                                         | Handle large data chunks during pairing.                                                      |
+| **EXCHANGE**                    | Encrypted payload            | Encrypted response           | Vehicle ECU                     | SE-V             | Vehicle                                                        | General data exchange command post-authentication.                                            |
+| **AUTH0 / AUTH1**               | ECC parameters               | Proof / MAC                  | Vehicle ECU ↔ SE-D or SE-V      | Both             | Two-step mutual authentication between vehicle and device SEs. |                                                                                               |
+| **PRESENCE0 / PRESENCE1**       | Challenge / signature        | Proof / encrypted payload    | Vehicle ECU                     | SE-D             | Device                                                         | Used in proximity check (presence verification).                                              |
+| **CONTROL FLOW**                | Control byte                 | OK                           | Vehicle ECU                     | SE-V / SE-D      | Both                                                           | Used to synchronize operation between reader and SE.                                          |
+| **MANAGE UA**                   | Config                       | OK                           | Host app                        | SE-D             | Device                                                         | Manage usage authorization of keys/endpoints.                                                 |
+| **CREATE RANGING KEY**          | Endpoint ref                 | URSK                         | Host app                        | SE-D             | Device                                                         | Generates UWB session keys for ranging.                                                       |
+| **DELETE RANGING KEYS**         | Key IDs                      | OK                           | Host app                        | SE-D             | Device                                                         | Deletes expired or unused UWB keys.                                                           |
+| **CONVERT ENDPOINT**            | Conversion TLV               | Updated cert                 | Host app                        | SE-D             | Device                                                         | Convert endpoint for shared key distribution.                                                 |
+| **TERMINATE / DELETE ENDPOINT** | Endpoint ID                  | OK                           | Host app / Vehicle ECU          | SE-D / SE-V      | Both                                                           | Ends key or endpoint lifecycle (unpairing, revocation).                                       |
+
+---
+
+### 🔸 Interface Context Summary
+
+| Interface                 | Commands Allowed                                                              | Typical Direction                                      |
+| ------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **NFC (WCC1)**            | SELECT, SPAKE2+, WRITE/GET DATA, CONTROL FLOW, AUTH0/1, PRESENCE0/1, EXCHANGE | Vehicle ↔ Device SE                                    |
+| **BLE (WCC2/WCC3)**       | AUTH0/1, PRESENCE0/1, EXCHANGE (via encapsulated messages)                    | Vehicle ↔ Device SE                                    |
+| **Wired (USB, SPI, I²C)** | Full command set                                                              | Host ↔ Local SE (Vehicle MCU ↔ SE-V; Device OS ↔ SE-D) |
+
+---
+
+In short:
+
+* **SE-D (Device/Phone/KeyFob)** holds the *user’s Digital Keys* and performs pairing, signing, and sharing.
+* **SE-V (Vehicle)** stores *trusted vehicle-side credentials*, verifies the device SE during authentication, and manages access control.
+
+Both speak the same APDU “language,” but one plays **issuer** and the other plays **verifier** in most flows.
