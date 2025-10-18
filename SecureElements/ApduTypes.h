@@ -156,6 +156,140 @@ typedef struct {
     uint32_t le;
 } ApduGetNotificationParam;
 
+/* Serialized wire buffer */
+typedef struct {
+    uint8_t *buf;
+    uint32_t len;
+} ApduWireBuffer;
+
+typedef struct {
+    const uint8_t *aid;
+    uint32_t aid_len;
+    uint8_t p1;
+    uint8_t p2;
+} ApduSelectParam;
+
+typedef struct {
+    const uint8_t *spake_blob;
+    uint32_t spake_blob_len;
+} ApduSpakeParam;
+
+typedef struct {
+    const uint8_t *tlv;
+    uint32_t tlv_len;
+    uint32_t offset;
+} ApduWriteDataParam;
+
+typedef struct {
+    uint16_t tag;
+    uint8_t p1;
+    uint8_t p2;
+    uint32_t le;
+} ApduGetDataParam;
+
+typedef struct {
+    uint32_t le;
+} ApduGetResponseParam;
+
+typedef struct {
+    uint8_t opcode;
+    const uint8_t *payload;
+    uint32_t payload_len;
+} ApduOpControlFlowParam;
+
+typedef struct {
+    uint8_t endpoint_id;
+    const uint8_t *params;
+    uint32_t params_len;
+} ApduEndpointParam;
+
+typedef struct {
+    uint8_t instance_id;
+    const uint8_t *params;
+    uint32_t params_len;
+} ApduInstanceParam;
+
+typedef struct {
+    const uint8_t *pubkey;
+    uint32_t pubkey_len;
+    const uint8_t *meta;
+    uint32_t meta_len;
+} ApduCreateKeyParam;
+
+typedef struct {
+    const uint8_t *key_ids;
+    uint32_t key_ids_len;
+} ApduDeleteKeyParam;
+
+typedef struct {
+    uint8_t alg;
+    const uint8_t *hash;
+    uint32_t hash_len;
+} ApduSignParam;
+
+typedef struct {
+    uint16_t tag;
+    uint32_t offset;
+    uint32_t length;
+} ApduGetPrivateDataParam;
+
+typedef struct {
+    uint16_t tag;
+    const uint8_t *data;
+    uint32_t data_len;
+} ApduSetPrivateDataParam;
+
+typedef struct {
+    uint32_t offset;
+    const uint8_t *data;
+    uint32_t data_len;
+} ApduWriteBufferParam;
+
+typedef struct {
+    uint32_t offset;
+    uint32_t length;
+} ApduReadBufferParam;
+
+typedef struct {
+    const uint8_t *auth_payload;
+    uint32_t auth_payload_len;
+} ApduAuthParam;
+
+typedef struct {
+    const uint8_t *payload;
+    uint32_t payload_len;
+} ApduExchangeParam;
+
+typedef struct {
+    uint8_t notification_id;
+    uint16_t le;
+} ApduGetNotificationParam;
+
+/* Generic param (fallback) */
+typedef struct {
+    const uint8_t *data;
+    uint32_t data_len;
+    uint32_t le;
+    uint8_t cla_override; /* 0xFF means no override */
+} ApduGenericParam;
+
+/* New types used by SeInCarServices.c */
+typedef struct {
+    uint8_t key_id;
+} ApduKeyIdParam;
+
+typedef struct {
+    uint8_t key_id;
+    uint8_t flags;
+    const uint8_t *meta;
+    uint32_t meta_len;
+} ApduKeyProvisionParam;
+
+typedef struct {
+    const uint8_t *data;
+    uint32_t len;
+} ApduBlobParam;
+
 /* Helper: default AID (CCC framework) */
 static const uint8_t CCC_FRAMEWORK_AID[] = {
     0xA0,0x00,0x00,0x08,0x09,0x43,0x43,0x43,0x44,0x4B,0x46,0x76,0x31

@@ -8,9 +8,27 @@
 extern "C" {
 #endif
 
-/* APDU command identifiers (must align with ApduTypes.h expectations) */
+/* Minimal APDU frame & response types (kept here for completeness) */
+typedef struct {
+    uint8_t cla;
+    uint8_t ins;
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t *data;   /* allocated by builder */
+    uint32_t lc;
+    uint32_t le;
+} ApduFrame;
+
+typedef struct {
+    uint8_t *data;   /* allocated by parser (apdu_parse_response) */
+    uint32_t len;
+    uint8_t sw1;
+    uint8_t sw2;
+} ApduResponse;
+
 typedef enum {
     APDU_CMD_SELECT = 0,
+    APDU_CMD_GENERIC,
     APDU_CMD_SPAKE2_REQUEST,
     APDU_CMD_SPAKE2_VERIFY,
     APDU_CMD_WRITE_DATA,
@@ -39,14 +57,20 @@ typedef enum {
     APDU_CMD_PRESENCE1,
     APDU_CMD_EXCHANGE,
     APDU_CMD_GET_NOTIFICATION,
+
+    /* --- Extended CCC SEInCar commands (from CCC Digital Key TS v4.0) --- */
+    APDU_CMD_GET_PROVISION_STATUS,
+    APDU_CMD_GET_PROVISION_INFO,
+    APDU_CMD_GET_PAIRING_STATUS,
+    APDU_CMD_KEY_GET_INFO,
+    APDU_CMD_KEY_PROVISION,
+    APDU_CMD_KEY_REVOKE,
+    APDU_CMD_KEY_SHARE,
+    APDU_CMD_AUTH_CHALLENGE,
+    APDU_CMD_AUTH_VERIFY,
+
     APDU_CMD_COUNT
 } ApduCommandId;
-
-/* Serialized wire buffer */
-typedef struct {
-    uint8_t *buf;
-    uint32_t len;
-} ApduWireBuffer;
 
 /* Public API */
 /* Build command: now accepts void* param which must point to the right typed struct

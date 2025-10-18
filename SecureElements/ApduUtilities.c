@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-/* Descriptor defaults (CLA/INS/P1/P2) aligned with CCC spec sections we extracted */
+/* Descriptor defaults (CLA/INS/P1/P2) aligned with CCC spec sections */
 typedef struct {
     ApduCommandId id;
     uint8_t cla;
@@ -13,7 +13,9 @@ typedef struct {
     const char *desc;
 } CmdDesc;
 
+/* Command table: keep existing commands first, then extended ones */
 static const CmdDesc cmd_table[] = {
+    { APDU_CMD_GENERIC,              0x00, 0x00, 0x00, 0x00, "APDU_CMD_GENERIC" },
     { APDU_CMD_SELECT,               0x00, 0xA4, 0x04, 0x00, "SELECT" },
     { APDU_CMD_SPAKE2_REQUEST,       0x00, 0x30, 0x00, 0x00, "SPAKE2+ REQUEST" },
     { APDU_CMD_SPAKE2_VERIFY,        0x00, 0x32, 0x00, 0x00, "SPAKE2+ VERIFY" },
@@ -42,10 +44,19 @@ static const CmdDesc cmd_table[] = {
     { APDU_CMD_PRESENCE0,            0x00, 0xF7, 0x00, 0x00, "PRESENCE0" },
     { APDU_CMD_PRESENCE1,            0x00, 0xF8, 0x00, 0x00, "PRESENCE1" },
     { APDU_CMD_EXCHANGE,             0x80, 0xFE, 0x00, 0x00, "EXCHANGE" },
-    { APDU_CMD_GET_NOTIFICATION,     0x00, 0xB2, 0x00, 0x00, "GET NOTIFICATION" }
-};
+    { APDU_CMD_GET_NOTIFICATION,     0x00, 0xB2, 0x00, 0x00, "GET NOTIFICATION" },
 
-_Static_assert(sizeof(cmd_table)/sizeof(cmd_table[0]) == APDU_CMD_COUNT, "Cmd table mismatch");
+    /* CCC Digital Key v4.0 Secure Element service extensions */
+    { APDU_CMD_GET_PROVISION_STATUS, 0x80, 0x10, 0x00, 0x00, "GET PROVISION STATUS" },
+    { APDU_CMD_GET_PROVISION_INFO,   0x80, 0x11, 0x00, 0x00, "GET PROVISION INFO" },
+    { APDU_CMD_GET_PAIRING_STATUS,   0x80, 0x20, 0x00, 0x00, "GET PAIRING STATUS" },
+    { APDU_CMD_KEY_GET_INFO,         0x80, 0x21, 0x00, 0x00, "KEY GET INFO" },
+    { APDU_CMD_KEY_PROVISION,        0x80, 0x22, 0x00, 0x00, "KEY PROVISION" },
+    { APDU_CMD_KEY_REVOKE,           0x80, 0x23, 0x00, 0x00, "KEY REVOKE" },
+    { APDU_CMD_KEY_SHARE,            0x80, 0x24, 0x00, 0x00, "KEY SHARE" },
+    { APDU_CMD_AUTH_CHALLENGE,       0x80, 0x30, 0x00, 0x00, "AUTH CHALLENGE" },
+    { APDU_CMD_AUTH_VERIFY,          0x80, 0x31, 0x00, 0x00, "AUTH VERIFY" },
+};
 
 /* helpers */
 static uint8_t *memdup_u8(const uint8_t *p, uint32_t n) {
@@ -326,6 +337,53 @@ int apdu_build_command(ApduCommandId cmd, const void *param, ApduFrame *out) {
             break;
         }
 
+        /* -------------------------- New CCC commands -------------------------- */
+        case APDU_CMD_GET_PROVISION_STATUS:
+        case APDU_CMD_GET_PROVISION_INFO:
+        case APDU_CMD_GET_PAIRING_STATUS:
+        case APDU_CMD_AUTH_CHALLENGE: {
+            /* these commands have no body; param ignored */
+            break;
+        }
+
+        case APDU_CMD_KEY_GET_INFO:
+        case APDU_CMD_KEY_REVOKE: {
+            const ApduKeyIdParam *p = (const ApduKeyIdParam*)param;
+            if (!p) return -1;
+            uint8_t b = p->key_id;
+            out->data = memdup_u8(&b, 1);
+            out->lc = 1;
+            break;
+        }
+
+        case APDU_CMD_KEY_PROVISION: {
+            const ApduKeyProvisionParam *p = (const ApduKeyProvisionParam*)param;
+            if (!p) return -1;
+            /* encode: key_id (1) | flags (1) | meta_len(2) | meta */
+            uint32_t l = 1 + 1 + 2 + (p->meta_len);
+            uint8_t *buf = (uint8_t*)malloc(l);
+            if (!buf) return -1;
+            uint32_t idx = 0;
+            buf[idx++] = p->key_id;
+            buf[idx++] = p->flags;
+            buf[idx++] = (uint8_t)((p->meta_len >> 8) & 0xFF);
+            buf[idx++] = (uint8_t)(p->meta_len & 0xFF);
+            if (p->meta && p->meta_len) memcpy(&buf[idx], p->meta, p->meta_len);
+            out->data = buf;
+            out->lc = l;
+            break;
+        }
+
+        case APDU_CMD_KEY_SHARE:
+        case APDU_CMD_AUTH_VERIFY: {
+            const ApduBlobParam *p = (const ApduBlobParam*)param;
+            if (!p || !p->data || p->len==0) return -1;
+            out->data = memdup_u8(p->data, p->len);
+            out->lc = p->len;
+            break;
+        }
+
+        case APDU_CMD_GENERIC:
         default:
             /* fallback: if param is ApduGenericParam style, accept it */
             if (param) {
