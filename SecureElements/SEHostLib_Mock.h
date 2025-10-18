@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef enum {
+    SEHOST_UNKNOW = 0xFFFF,
     SEHOST_OK = 0x9000,
     SEHOST_ERR_SEND_FAIL = 0x7010,
     SEHOST_ERR_RECEIVE_FAIL = 0x7011

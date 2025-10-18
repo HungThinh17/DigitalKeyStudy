@@ -8,24 +8,6 @@
 extern "C" {
 #endif
 
-/* Minimal APDU frame & response types (kept here for completeness) */
-typedef struct {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1;
-    uint8_t p2;
-    uint8_t *data;   /* allocated by builder */
-    uint32_t lc;
-    uint32_t le;
-} ApduFrame;
-
-typedef struct {
-    uint8_t *data;   /* allocated by parser (apdu_parse_response) */
-    uint32_t len;
-    uint8_t sw1;
-    uint8_t sw2;
-} ApduResponse;
-
 typedef enum {
     APDU_CMD_SELECT = 0,
     APDU_CMD_GENERIC,

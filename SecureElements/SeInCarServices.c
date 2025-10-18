@@ -1,11 +1,20 @@
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "SeInCarConfig.h"
+#include "SeInCarServices.h"
 
 #ifdef MOCK_SE_HOSTLIB
 #include "SeInCarServices.h"
 #include "SEHostLib_Mock.h"
+#else
+typedef enum {
+    SEHOST_UNKNOW = 0xFFFF,
+    SEHOST_OK = 0x9000,
+    SEHOST_ERR_SEND_FAIL = 0x7010,
+    SEHOST_ERR_RECEIVE_FAIL = 0x7011
+} SEHostStatus;
 #endif /* MOCK_SE_HOSTLIB */
 
 /* --------------------------------------------------------- */
@@ -41,10 +50,13 @@ static SeStatus_t se_convert_host_status(SEHostStatus s)
 /* --------------------------------------------------------- */
 SeStatus_t Se_Init(void)
 {
+    SEHostStatus st = SEHOST_UNKNOW;
+
     if (g_ctx.initialized)
         return SE_ERR_ALREADY_INIT;
+
 #ifdef MOCK_SE_HOSTLIB
-    SEHostStatus st = SEHost_Init(NULL);
+    st = SEHost_Init(NULL);
 #else
     // TODO
 #endif /*MOCK_SE_HOSTLIB*/
@@ -98,11 +110,13 @@ SeStatus_t Se_PowerOff(void)
 
 SeStatus_t Se_Reset(void)
 {
+    SEHostStatus st = SEHOST_UNKNOW;
+
     if (!g_ctx.initialized)
         return SE_ERR_NOT_INIT;
 
 #ifdef MOCK_SE_HOSTLIB
-    SEHostStatus st = SEHost_Reset();
+    st = SEHost_Reset();
 #else
     // TODO
 #endif /*MOCK_SE_HOSTLIB*/
@@ -148,6 +162,8 @@ SeStatus_t Se_EndAccess(void)
 SeStatus_t Se_SendApduSync(ApduCommandId cmd, const void *param,
                            ApduResponse *resp, uint32_t timeout_ms)
 {
+    SEHostStatus st = SEHOST_UNKNOW;
+
     if (Se_IsReady() != SE_OK)
         return SE_ERR_BUSY;
     if (!resp)
@@ -176,7 +192,7 @@ SeStatus_t Se_SendApduSync(ApduCommandId cmd, const void *param,
     uint32_t rx_len = 0;
     
 #ifdef MOCK_SE_HOSTLIB
-    SEHostStatus st = SEHost_Transmit(wire.buf, wire.len, &rx, &rx_len, timeout_ms);
+    st = SEHost_Transmit(wire.buf, wire.len, &rx, &rx_len, timeout_ms);
 #else
     // TODO
 #endif /*MOCK_SE_HOSTLIB*/
